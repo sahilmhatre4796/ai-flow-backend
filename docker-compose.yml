@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: aiflow
+      POSTGRES_USER: aiflow
+      POSTGRES_PASSWORD: aiflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: aiflow_minio
+      MINIO_ROOT_PASSWORD: aiflow_minio_secret
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console
+    volumes:
+      - minio_data:/data
+
+  backend:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://aiflow:aiflow@postgres:5432/aiflow
+      SYNC_DATABASE_URL: postgresql+psycopg2://aiflow:aiflow@postgres:5432/aiflow
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    ports:
+      - "8000:8000"
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: celery -A app.tasks.celery_app worker -l info -Q documents,emails
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://aiflow:aiflow@postgres:5432/aiflow
+      SYNC_DATABASE_URL: postgresql+psycopg2://aiflow:aiflow@postgres:5432/aiflow
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
