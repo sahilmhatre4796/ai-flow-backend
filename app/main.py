@@ -1,6 +1,5 @@
 """
 FastAPI app entrypoint.
-
 CORS needs two different policies, not one global `allow_origins=["*"]`:
   - The authenticated dashboard API must only be callable from our own
     frontend origin(s) — credentials are involved, so a wildcard would be
@@ -8,7 +7,6 @@ CORS needs two different policies, not one global `allow_origins=["*"]`:
   - The embeddable widget (`/widget/*`, `/ws/widget/*`) is, by design,
     loaded on arbitrary customer domains we can't know in advance, and
     carries no cookies/credentials — so it needs to allow any origin.
-
 `DualOriginCORSMiddleware` below applies the right policy per path prefix
 instead of relaxing CORS globally.
 """
@@ -43,11 +41,11 @@ class DualOriginCORSMiddleware:
         self.allowed_origins = set(allowed_origins)
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
+        if scope["type"] not in ("http", "websocket"):
             await self.app(scope, receive, send)
             return
 
-        path = scope["path"]
+        path = scope.get("path", "")
         headers = Headers(scope=scope)
         origin = headers.get("origin")
         is_public_path = any(path.startswith(p) for p in PUBLIC_PREFIXES)
@@ -59,7 +57,8 @@ class DualOriginCORSMiddleware:
             allow_origin = origin if origin in self.allowed_origins else None
             allow_credentials = True
 
-        if scope["method"] == "OPTIONS":
+        # WebSocket scopes have no "method" — only handle OPTIONS for HTTP
+        if scope["type"] == "http" and scope.get("method") == "OPTIONS":
             response_headers = {
                 "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
                 "Access-Control-Allow-Headers": "Authorization, Content-Type",
@@ -74,15 +73,22 @@ class DualOriginCORSMiddleware:
 
         async def send_with_cors(message):
             if message["type"] == "http.response.start" and allow_origin:
-                message["headers"].append((b"access-control-allow-origin", allow_origin.encode()))
+                headers_list = list(message.get("headers", []))
+                headers_list.append(
+                    (b"access-control-allow-origin", allow_origin.encode())
+                )
                 if allow_credentials:
-                    message["headers"].append((b"access-control-allow-credentials", b"true"))
+                    headers_list.append(
+                        (b"access-control-allow-credentials", b"true")
+                    )
+                message["headers"] = headers_list
             await send(message)
 
         await self.app(scope, receive, send_with_cors)
 
 
 app = FastAPI(title="AI FLOW API", version="1.0.0")
+
 app.add_middleware(DualOriginCORSMiddleware, allowed_origins=settings.cors_origins)
 
 
