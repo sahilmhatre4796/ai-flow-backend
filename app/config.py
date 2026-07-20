@@ -67,9 +67,12 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     SMTP_FROM_ADDRESS: str = "no-reply@aiflow.io"
 
-    @property
-    def cors_origins(self) -> list[str]:
-        return [o.strip() for o in self.BACKEND_CORS_ORIGINS.split(",") if o.strip()]
+   @property
+def cors_origins(self) -> list[str]:
+    raw = self.BACKEND_CORS_ORIGINS.strip()
+    if raw == "*":
+        return ["*"]
+    return [o.strip() for o in raw.split(",") if o.strip()]
 
 
 @lru_cache
