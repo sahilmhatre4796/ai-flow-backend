@@ -39,6 +39,7 @@ class DualOriginCORSMiddleware:
     def __init__(self, app, allowed_origins: list[str]):
         self.app = app
         self.allowed_origins = set(allowed_origins)
+        self.allow_all = "*" in allowed_origins
 
     async def __call__(self, scope, receive, send):
         if scope["type"] not in ("http", "websocket"):
@@ -50,14 +51,13 @@ class DualOriginCORSMiddleware:
         origin = headers.get("origin")
         is_public_path = any(path.startswith(p) for p in PUBLIC_PREFIXES)
 
-        if is_public_path:
+        if is_public_path or self.allow_all:
             allow_origin = origin or "*"
             allow_credentials = False
         else:
             allow_origin = origin if origin in self.allowed_origins else None
             allow_credentials = True
 
-        # WebSocket scopes have no "method" — only handle OPTIONS for HTTP
         if scope["type"] == "http" and scope.get("method") == "OPTIONS":
             response_headers = {
                 "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
