@@ -74,3 +74,23 @@ async def health() -> dict:
 
     all_ok = all(v == "ok" for v in checks.values())
     return {"status": "ok" if all_ok else "degraded", "checks": checks}
+
+
+@app.post("/test-workspace")
+async def test_workspace():
+    """Temporary debug endpoint."""
+    import traceback
+    try:
+        from app.database import AsyncSessionLocal
+        from app.models.workspace import Workspace, WorkspaceMembership, WorkspaceRole, MembershipStatus
+        from app.models.billing import Subscription
+        import uuid
+        
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import select
+            # Try to list workspaces
+            result = await db.execute(select(Workspace).limit(5))
+            workspaces = result.scalars().all()
+            return {"status": "ok", "workspace_count": len(workspaces)}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
