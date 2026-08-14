@@ -91,8 +91,18 @@ async def refresh(body: RefreshRequest, db: AsyncSession = Depends(get_db)) -> T
     if not user or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found or inactive")
 
+    # Issue new tokens in the same transaction — revoke old + create new atomically
+    access_token = create_access_token(user.id)
+    plaintext_refresh, hashed_refresh = generate_opaque_token()
+    db.add(
+        RefreshToken(
+            user_id=user.id,
+            hashed_token=hashed_refresh,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        )
+    )
     await db.commit()
-    return await _issue_tokens(db, user)
+    return TokenResponse(access_token=access_token, refresh_token=plaintext_refresh)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

@@ -110,7 +110,7 @@ async def get_usage(
 
     period_start = (subscription.current_period_end - timedelta(days=30)) if (
         subscription and subscription.current_period_end
-    ) else None
+    ) else (datetime.now(timezone.utc) - timedelta(days=30))
     messages_query = (
         select(func.count(Message.id))
         .join(Conversation, Conversation.id == Message.conversation_id)

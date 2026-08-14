@@ -26,12 +26,14 @@ async def widget_socket(websocket: WebSocket, bot_public_key: str, visitor_id: s
             await websocket.close(code=4404)
             return
 
+        # Use SELECT FOR UPDATE to prevent race condition on conversation creation
+        from sqlalchemy import with_for_of
         conv_result = await db.execute(
             select(Conversation).where(
                 Conversation.bot_id == bot.id,
                 Conversation.visitor_id == visitor_id,
                 Conversation.channel == ConversationChannel.WIDGET,
-            ).order_by(Conversation.started_at.desc())
+            ).order_by(Conversation.started_at.desc()).with_for_update()
         )
         conversation = conv_result.scalars().first()
         if not conversation:
