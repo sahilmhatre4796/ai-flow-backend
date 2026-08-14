@@ -44,6 +44,12 @@ ENUM_COLUMNS = {
 
 def upgrade() -> None:
     for enum_name, values in ENUM_FIXES:
+        # First fix data: lowercase all existing values
+        for table, column in ENUM_COLUMNS[enum_name]:
+            for val in values:
+                # Map uppercase -> lowercase for existing data
+                op.execute(f"UPDATE {table} SET {column} = '{val}' WHERE {column}::text = UPPER('{val}')")
+
         temp_name = f"{enum_name}_new"
         op.execute(f"DROP TYPE IF EXISTS {temp_name}")
 
