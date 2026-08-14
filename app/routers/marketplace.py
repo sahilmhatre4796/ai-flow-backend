@@ -64,7 +64,7 @@ async def install_template(
         workspace_id=workspace_id,
         name=template.name,
         persona=template.persona,
-        chat_provider=ChatProviderName.ANTHROPIC,
+        chat_provider=ChatProviderName.anthropic,
         chat_model="claude-sonnet-4-6",
     )
     db.add(bot)

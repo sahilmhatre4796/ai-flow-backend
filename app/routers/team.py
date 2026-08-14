@@ -69,7 +69,7 @@ async def invite_member(
         user_id=existing_user.id if existing_user else None,
         invited_email=None if existing_user else body.email,
         role=body.role,
-        status=MembershipStatus.ACTIVE if existing_user else MembershipStatus.INVITED,
+        status=MembershipStatus.active if existing_user else MembershipStatus.invited,
     )
     db.add(membership)
     await db.flush()

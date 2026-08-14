@@ -34,8 +34,8 @@ async def create_workspace(
         WorkspaceMembership(
             workspace_id=workspace.id,
             user_id=current_user.id,
-            role=WorkspaceRole.OWNER,
-            status=MembershipStatus.ACTIVE,
+            role=WorkspaceRole.owner,
+            status=MembershipStatus.active,
         )
     )
     db.add(Subscription(workspace_id=workspace.id))  # defaults to FREE/ACTIVE
@@ -43,7 +43,7 @@ async def create_workspace(
 
     return WorkspaceResponse(
         id=str(workspace.id), name=workspace.name, slug=workspace.slug,
-        created_at=workspace.created_at, role=WorkspaceRole.OWNER,
+        created_at=workspace.created_at, role=WorkspaceRole.owner,
     )
 
 
@@ -54,7 +54,7 @@ async def my_workspaces(
     result = await db.execute(
         select(WorkspaceMembership, Workspace)
         .join(Workspace, Workspace.id == WorkspaceMembership.workspace_id)
-        .where(WorkspaceMembership.user_id == current_user.id, WorkspaceMembership.status == MembershipStatus.ACTIVE)
+        .where(WorkspaceMembership.user_id == current_user.id, WorkspaceMembership.status == MembershipStatus.active)
     )
     return [
         WorkspaceResponse(id=str(ws.id), name=ws.name, slug=ws.slug, created_at=ws.created_at, role=membership.role)

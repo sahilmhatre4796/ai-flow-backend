@@ -25,7 +25,7 @@ async def retrieve_relevant_chunks(db: AsyncSession, bot_id: uuid.UUID, query: s
         .join(Document, Document.id == Chunk.document_id)
         .where(
             Chunk.bot_id == bot_id,
-            Document.status == DocumentStatus.READY,
+            Document.status == DocumentStatus.ready,
             Chunk.embedding.isnot(None),
         )
         .order_by(Chunk.embedding.cosine_distance(query_embedding))

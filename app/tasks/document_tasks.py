@@ -15,17 +15,17 @@ from app.tasks.celery_app import celery_app
 
 
 def _extract_text(document: Document) -> str:
-    if document.source_type in (DocumentSourceType.PASTED_TEXT, DocumentSourceType.FAQ, DocumentSourceType.FILE):
+    if document.source_type in (DocumentSourceType.pasted_text, DocumentSourceType.faq, DocumentSourceType.file):
         if not document.storage_key:
             raise ValueError("Document has no stored content to read.")
         data = storage.download_bytes(document.storage_key)
-        if document.source_type == DocumentSourceType.FILE:
+        if document.source_type == DocumentSourceType.file:
             return parsing.parse_by_mime_or_extension(
                 data, document.original_filename or document.name, document.mime_type
             )
         return data.decode("utf-8", errors="ignore")
 
-    if document.source_type in (DocumentSourceType.URL, DocumentSourceType.SITEMAP):
+    if document.source_type in (DocumentSourceType.url, DocumentSourceType.sitemap):
         if not document.source_url:
             raise ValueError("Document has no source URL to fetch.")
         return parsing.fetch_url_text(document.source_url)
@@ -42,7 +42,7 @@ def process_document(document_id: str) -> None:
             return
 
         try:
-            document.status = DocumentStatus.PARSING
+            document.status = DocumentStatus.parsing
             db.commit()
 
             raw_text = _extract_text(document)
@@ -50,14 +50,14 @@ def process_document(document_id: str) -> None:
                 raise ValueError("No extractable text was found in this document.")
 
             document.char_count = len(raw_text)
-            document.status = DocumentStatus.CHUNKING
+            document.status = DocumentStatus.chunking
             db.commit()
 
             pieces = chunk_text(raw_text)
             if not pieces:
                 raise ValueError("Text was extracted but produced no usable chunks.")
 
-            document.status = DocumentStatus.EMBEDDING
+            document.status = DocumentStatus.embedding
             db.commit()
 
             embedding_provider = get_embedding_provider()
@@ -76,13 +76,13 @@ def process_document(document_id: str) -> None:
                     )
                 )
 
-            document.status = DocumentStatus.READY
+            document.status = DocumentStatus.ready
             document.error_message = None
             db.commit()
 
         except Exception as exc:  # noqa: BLE001 — deliberately broad: any failure must be recorded, not swallowed
             db.rollback()
-            document.status = DocumentStatus.ERROR
+            document.status = DocumentStatus.error
             document.error_message = str(exc)[:2000]
             db.commit()
             raise
@@ -109,20 +109,20 @@ def process_sitemap(parent_document_id: str) -> None:
                     workspace_id=parent.workspace_id,
                     bot_id=parent.bot_id,
                     name=page_url,
-                    source_type=DocumentSourceType.SITEMAP,
+                    source_type=DocumentSourceType.sitemap,
                     source_url=page_url,
-                    status=DocumentStatus.PENDING,
+                    status=DocumentStatus.pending,
                 )
                 db.add(child)
                 db.flush()  # assign child.id before enqueueing
                 process_document.delay(str(child.id))
 
-            parent.status = DocumentStatus.READY  # the sitemap "index" itself has no chunks of its own
+            parent.status = DocumentStatus.ready  # the sitemap "index" itself has no chunks of its own
             parent.error_message = None
             db.commit()
         except Exception as exc:  # noqa: BLE001
             db.rollback()
-            parent.status = DocumentStatus.ERROR
+            parent.status = DocumentStatus.error
             parent.error_message = str(exc)[:2000]
             db.commit()
             raise

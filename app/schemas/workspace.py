@@ -22,7 +22,7 @@ class WorkspaceResponse(BaseModel):
 
 class InviteMemberRequest(BaseModel):
     email: EmailStr
-    role: WorkspaceRole = WorkspaceRole.AGENT
+    role: WorkspaceRole = WorkspaceRole.agent
 
 
 class MemberResponse(BaseModel):

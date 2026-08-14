@@ -32,8 +32,8 @@ async def create_checkout_session(
         raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, "Stripe is not configured on this server yet")
 
     price_id = {
-        PlanName.PRO: settings.STRIPE_PRICE_ID_PRO,
-        PlanName.BUSINESS: settings.STRIPE_PRICE_ID_BUSINESS,
+        PlanName.pro: settings.STRIPE_PRICE_ID_PRO,
+        PlanName.business: settings.STRIPE_PRICE_ID_BUSINESS,
     }.get(body.plan)
     if not price_id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No Stripe price configured for this plan")
@@ -71,7 +71,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
         if subscription:
             subscription.stripe_customer_id = data.get("customer")
             subscription.stripe_subscription_id = data.get("subscription")
-            subscription.status = SubscriptionStatus.ACTIVE
+            subscription.status = SubscriptionStatus.active
             await db.commit()
 
     elif event_type in ("customer.subscription.updated", "customer.subscription.deleted"):
@@ -81,10 +81,10 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
         subscription = result.scalar_one_or_none()
         if subscription:
             status_map = {
-                "active": SubscriptionStatus.ACTIVE,
-                "trialing": SubscriptionStatus.TRIALING,
-                "past_due": SubscriptionStatus.PAST_DUE,
-                "canceled": SubscriptionStatus.CANCELED,
+                "active": SubscriptionStatus.active,
+                "trialing": SubscriptionStatus.trialing,
+                "past_due": SubscriptionStatus.past_due,
+                "canceled": SubscriptionStatus.canceled,
             }
             subscription.status = status_map.get(data.get("status"), subscription.status)
             if data.get("current_period_end"):
@@ -100,7 +100,7 @@ async def get_usage(
 ) -> UsageResponse:
     sub_result = await db.execute(select(Subscription).where(Subscription.workspace_id == workspace_id))
     subscription = sub_result.scalar_one_or_none()
-    plan = subscription.plan if subscription else PlanName.FREE
+    plan = subscription.plan if subscription else PlanName.free
     limits = PLAN_LIMITS[plan]
 
     bots_count = (await db.execute(select(func.count(Bot.id)).where(Bot.workspace_id == workspace_id))).scalar_one()

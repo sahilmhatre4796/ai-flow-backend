@@ -26,9 +26,9 @@ async def get_analytics(
         .group_by(Conversation.status)
     )
     counts = {status: count for status, count in status_counts_result.all()}
-    resolved = counts.get(ConversationStatus.RESOLVED, 0)
-    unresolved = counts.get(ConversationStatus.UNRESOLVED, 0)
-    open_count = counts.get(ConversationStatus.OPEN, 0)
+    resolved = counts.get(ConversationStatus.resolved, 0)
+    unresolved = counts.get(ConversationStatus.unresolved, 0)
+    open_count = counts.get(ConversationStatus.open, 0)
     total_conversations = resolved + unresolved + open_count
 
     leads_total_result = await db.execute(select(func.count(Lead.id)).where(Lead.workspace_id == workspace_id))
@@ -49,7 +49,7 @@ async def get_analytics(
     recent_result = await db.execute(
         select(Message.content, Message.created_at)
         .join(Conversation, Conversation.id == Message.conversation_id)
-        .where(Conversation.workspace_id == workspace_id, Message.role == MessageRole.USER)
+        .where(Conversation.workspace_id == workspace_id, Message.role == MessageRole.user)
         .order_by(Message.created_at.desc())
         .limit(10)
     )

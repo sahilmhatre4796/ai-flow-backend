@@ -10,9 +10,9 @@ from app.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class ChatProviderName(str, enum.Enum):
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    OLLAMA = "ollama"
+    openai = "openai"
+    anthropic = "anthropic"
+    ollama = "ollama"
 
 
 def generate_public_key() -> str:

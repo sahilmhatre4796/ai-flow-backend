@@ -111,7 +111,7 @@ async def test_ws_create():
             db.add(ws)
             await db.flush()
             
-            mem = WorkspaceMembership(workspace_id=ws.id, user_id=user.id, role=WorkspaceRole.OWNER, status=MembershipStatus.ACTIVE)
+            mem = WorkspaceMembership(workspace_id=ws.id, user_id=user.id, role=WorkspaceRole.owner, status=MembershipStatus.active)
             db.add(mem)
             sub = Subscription(workspace_id=ws.id)
             db.add(sub)

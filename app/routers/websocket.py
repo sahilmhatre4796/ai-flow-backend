@@ -32,14 +32,14 @@ async def widget_socket(websocket: WebSocket, bot_public_key: str, visitor_id: s
             select(Conversation).where(
                 Conversation.bot_id == bot.id,
                 Conversation.visitor_id == visitor_id,
-                Conversation.channel == ConversationChannel.WIDGET,
+                Conversation.channel == ConversationChannel.widget,
             ).order_by(Conversation.started_at.desc()).with_for_update()
         )
         conversation = conv_result.scalars().first()
         if not conversation:
             conversation = Conversation(
                 workspace_id=bot.workspace_id, bot_id=bot.id, visitor_id=visitor_id,
-                channel=ConversationChannel.WIDGET,
+                channel=ConversationChannel.widget,
             )
             db.add(conversation)
             await db.commit()
@@ -55,7 +55,7 @@ async def widget_socket(websocket: WebSocket, bot_public_key: str, visitor_id: s
                         await websocket.send_json({"role": "assistant", "content": "This bot is no longer active."})
                         continue
 
-                    user_message = Message(conversation_id=conversation.id, role=MessageRole.USER, content=text)
+                    user_message = Message(conversation_id=conversation.id, role=MessageRole.user, content=text)
                     msg_db.add(user_message)
                     await msg_db.flush()
                     await broadcaster.publish(bot.workspace_id, {
@@ -65,7 +65,7 @@ async def widget_socket(websocket: WebSocket, bot_public_key: str, visitor_id: s
 
                     reply_text, used_chunks = await generate_bot_response(msg_db, current_bot, text)
                     assistant_message = Message(
-                        conversation_id=conversation.id, role=MessageRole.ASSISTANT, content=reply_text,
+                        conversation_id=conversation.id, role=MessageRole.assistant, content=reply_text,
                         retrieved_chunk_ids=[str(c.id) for c in used_chunks],
                     )
                     msg_db.add(assistant_message)
@@ -100,7 +100,7 @@ async def agent_socket(websocket: WebSocket, workspace_id: uuid.UUID, token: str
             select(WorkspaceMembership).where(
                 WorkspaceMembership.workspace_id == workspace_id,
                 WorkspaceMembership.user_id == user_id,
-                WorkspaceMembership.status == MembershipStatus.ACTIVE,
+                WorkspaceMembership.status == MembershipStatus.active,
             )
         )
         if not result.scalar_one_or_none():

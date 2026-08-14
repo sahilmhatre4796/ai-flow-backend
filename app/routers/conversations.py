@@ -119,7 +119,7 @@ async def send_agent_message(
     conv = await db.get(Conversation, conversation_id)
     if not conv or conv.workspace_id != workspace_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Conversation not found")
-    message = Message(conversation_id=conv.id, role=MessageRole.AGENT, content=body.text)
+    message = Message(conversation_id=conv.id, role=MessageRole.agent, content=body.text)
     db.add(message)
     conv.last_message_at = datetime.now(timezone.utc)
     await db.commit()
@@ -143,17 +143,17 @@ async def send_sandbox_message(
 
     conv = await db.get(Conversation, conversation_id) if conversation_id else None
     if not conv:
-        conv = Conversation(workspace_id=workspace_id, bot_id=bot_id, channel=ConversationChannel.SANDBOX)
+        conv = Conversation(workspace_id=workspace_id, bot_id=bot_id, channel=ConversationChannel.sandbox)
         db.add(conv)
         await db.flush()
 
-    user_message = Message(conversation_id=conv.id, role=MessageRole.USER, content=body.text)
+    user_message = Message(conversation_id=conv.id, role=MessageRole.user, content=body.text)
     db.add(user_message)
 
     reply_text, used_chunks = await generate_bot_response(db, bot, body.text)
     assistant_message = Message(
         conversation_id=conv.id,
-        role=MessageRole.ASSISTANT,
+        role=MessageRole.assistant,
         content=reply_text,
         retrieved_chunk_ids=[str(c.id) for c in used_chunks],
     )

@@ -14,20 +14,20 @@ settings = get_settings()
 
 
 class DocumentSourceType(str, enum.Enum):
-    FILE = "file"
-    URL = "url"
-    SITEMAP = "sitemap"
-    FAQ = "faq"
-    PASTED_TEXT = "pasted_text"
+    file = "file"
+    url = "url"
+    sitemap = "sitemap"
+    faq = "faq"
+    pasted_text = "pasted_text"
 
 
 class DocumentStatus(str, enum.Enum):
-    PENDING = "pending"
-    PARSING = "parsing"
-    CHUNKING = "chunking"
-    EMBEDDING = "embedding"
-    READY = "ready"
-    ERROR = "error"
+    pending = "pending"
+    parsing = "parsing"
+    chunking = "chunking"
+    embedding = "embedding"
+    ready = "ready"
+    error = "error"
 
 
 class Document(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -54,7 +54,7 @@ class Document(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     char_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     status: Mapped[DocumentStatus] = mapped_column(
-        Enum(DocumentStatus, name="document_status"), default=DocumentStatus.PENDING, nullable=False
+        Enum(DocumentStatus, name="document_status"), default=DocumentStatus.pending, nullable=False
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 

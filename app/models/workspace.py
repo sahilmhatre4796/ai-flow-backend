@@ -9,15 +9,15 @@ from app.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class WorkspaceRole(str, enum.Enum):
-    OWNER = "owner"
-    ADMIN = "admin"
-    AGENT = "agent"
-    VIEWER = "viewer"
+    owner = "owner"
+    admin = "admin"
+    agent = "agent"
+    viewer = "viewer"
 
 
 class MembershipStatus(str, enum.Enum):
-    ACTIVE = "active"
-    INVITED = "invited"
+    active = "active"
+    invited = "invited"
 
 
 class Workspace(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -52,7 +52,7 @@ class WorkspaceMembership(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     invited_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     role: Mapped[WorkspaceRole] = mapped_column(Enum(WorkspaceRole, name="workspace_role"), nullable=False)
     status: Mapped[MembershipStatus] = mapped_column(
-        Enum(MembershipStatus, name="membership_status"), default=MembershipStatus.ACTIVE, nullable=False
+        Enum(MembershipStatus, name="membership_status"), default=MembershipStatus.active, nullable=False
     )
 
     workspace: Mapped["Workspace"] = relationship(back_populates="memberships")

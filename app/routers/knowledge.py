@@ -52,11 +52,11 @@ async def upload_document(
         workspace_id=workspace_id,
         bot_id=bot_id,
         name=file.filename or "Uploaded document",
-        source_type=DocumentSourceType.FILE,
+        source_type=DocumentSourceType.file,
         storage_key=object_key,
         original_filename=file.filename,
         mime_type=file.content_type,
-        status=DocumentStatus.PENDING,
+        status=DocumentStatus.pending,
     )
     db.add(document)
     await db.flush()
@@ -83,10 +83,10 @@ async def create_from_text(
         workspace_id=workspace_id,
         bot_id=bot_id,
         name=body.name,
-        source_type=DocumentSourceType.PASTED_TEXT,
+        source_type=DocumentSourceType.pasted_text,
         storage_key=object_key,
         mime_type="text/plain",
-        status=DocumentStatus.PENDING,
+        status=DocumentStatus.pending,
     )
     db.add(document)
     await db.flush()
@@ -111,9 +111,9 @@ async def create_from_url(
         workspace_id=workspace_id,
         bot_id=bot_id,
         name=body.name,
-        source_type=DocumentSourceType.SITEMAP if body.is_sitemap else DocumentSourceType.URL,
+        source_type=DocumentSourceType.sitemap if body.is_sitemap else DocumentSourceType.url,
         source_url=body.url,
-        status=DocumentStatus.PENDING,
+        status=DocumentStatus.pending,
     )
     db.add(document)
     await db.flush()

@@ -10,22 +10,22 @@ from app.models.mixins import UUIDPrimaryKeyMixin, utcnow
 
 
 class ConversationChannel(str, enum.Enum):
-    WIDGET = "widget"
-    SANDBOX = "sandbox"   # internal "test bot" sandbox in the dashboard
-    API = "api"
+    widget = "widget"
+    sandbox = "sandbox"   # internal "test bot" sandbox in the dashboard
+    api = "api"
 
 
 class ConversationStatus(str, enum.Enum):
-    OPEN = "open"
-    RESOLVED = "resolved"
-    UNRESOLVED = "unresolved"
+    open = "open"
+    resolved = "resolved"
+    unresolved = "unresolved"
 
 
 class MessageRole(str, enum.Enum):
-    USER = "user"
-    ASSISTANT = "assistant"
-    AGENT = "agent"     # human teammate took over
-    SYSTEM = "system"
+    user = "user"
+    assistant = "assistant"
+    agent = "agent"     # human teammate took over
+    system = "system"
 
 
 class Conversation(Base, UUIDPrimaryKeyMixin):
@@ -40,7 +40,7 @@ class Conversation(Base, UUIDPrimaryKeyMixin):
         Enum(ConversationChannel, name="conversation_channel"), nullable=False
     )
     status: Mapped[ConversationStatus] = mapped_column(
-        Enum(ConversationStatus, name="conversation_status"), default=ConversationStatus.OPEN, nullable=False
+        Enum(ConversationStatus, name="conversation_status"), default=ConversationStatus.open, nullable=False
     )
     assigned_agent_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True

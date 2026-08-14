@@ -50,7 +50,7 @@ class CurrentMembership:
             select(WorkspaceMembership).where(
                 WorkspaceMembership.workspace_id == workspace_id,
                 WorkspaceMembership.user_id == current_user.id,
-                WorkspaceMembership.status == MembershipStatus.ACTIVE,
+                WorkspaceMembership.status == MembershipStatus.active,
             )
         )
         membership = result.scalar_one_or_none()
@@ -64,8 +64,8 @@ class CurrentMembership:
 
 # Convenience instances for common role requirements
 require_member = CurrentMembership()  # any active role
-require_admin = CurrentMembership(WorkspaceRole.OWNER, WorkspaceRole.ADMIN)
-require_owner = CurrentMembership(WorkspaceRole.OWNER)
+require_admin = CurrentMembership(WorkspaceRole.owner, WorkspaceRole.admin)
+require_owner = CurrentMembership(WorkspaceRole.owner)
 
 
 async def get_workspace_or_404(workspace_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> Workspace:

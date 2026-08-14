@@ -8,7 +8,7 @@ from app.models.bot import ChatProviderName
 class BotCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     persona: str = Field(min_length=1)
-    chat_provider: ChatProviderName = ChatProviderName.ANTHROPIC
+    chat_provider: ChatProviderName = ChatProviderName.anthropic
     chat_model: str = "claude-sonnet-4-6"
 
 
