@@ -84,39 +84,40 @@ async def health() -> dict:
     return {"status": "ok" if all_ok else "degraded", "checks": checks}
 
 
-@app.post("/test-ws-create")
-async def test_ws_create():
-    """Test workspace creation with actual DB user."""
+@app.post("/test-bot-create")
+async def test_bot_create():
+    """Debug: try to create a bot and return the full error."""
     import traceback
     try:
         from app.database import AsyncSessionLocal
-        from app.models.workspace import Workspace, WorkspaceMembership, WorkspaceRole, MembershipStatus
-        from app.models.billing import Subscription
-        from app.models.user import User
+        from app.models.bot import Bot, ChatProviderName
+        from app.models.workspace import Workspace
         from sqlalchemy import select
-        import re, secrets
         
         async with AsyncSessionLocal() as db:
-            # Find an existing user
-            result = await db.execute(select(User).limit(1))
-            user = result.scalar_one_or_none()
-            if not user:
-                return {"status": "error", "error": "No users in DB"}
+            # Find a workspace
+            result = await db.execute(select(Workspace).limit(1))
+            ws = result.scalar_one_or_none()
+            if not ws:
+                return {"status": "error", "error": "No workspaces in DB"}
             
-            def slugify(name):
-                base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "workspace"
-                return f"{base}-{secrets.token_hex(3)}"
+            # Check the enum type
+            from sqlalchemy import text
+            enum_check = await db.execute(text("SELECT typname, enumlabel FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE typname = 'chat_provider_name'"))
+            enum_rows = enum_check.fetchall()
             
-            ws = Workspace(name="Test WS", slug=slugify("Test WS"), owner_id=user.id)
-            db.add(ws)
-            await db.flush()
-            
-            mem = WorkspaceMembership(workspace_id=ws.id, user_id=user.id, role=WorkspaceRole.owner, status=MembershipStatus.active)
-            db.add(mem)
-            sub = Subscription(workspace_id=ws.id)
-            db.add(sub)
+            # Try creating a bot
+            bot = Bot(
+                workspace_id=ws.id,
+                name="Debug Bot",
+                persona="You are a helpful assistant",
+                chat_provider=ChatProviderName.anthropic,
+                chat_model="claude-3-haiku-20240307",
+            )
+            db.add(bot)
             await db.commit()
+            await db.refresh(bot)
             
-            return {"status": "ok", "workspace_id": str(ws.id), "user_id": str(user.id)}
+            return {"status": "ok", "bot_id": str(bot.id), "enum_rows": [{"typname": r[0], "enumlabel": r[1]} for r in enum_rows]}
     except Exception as e:
         return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
