@@ -29,29 +29,23 @@ settings = get_settings()
 
 
 def _try_send_verification_email(user_email: str, token: str) -> None:
-    """Try Celery first; fall back to direct call if worker unavailable."""
+    """Send verification email. Logs if unable to send."""
     try:
-        from app.tasks.email_tasks import send_verification_email_task
-        send_verification_email_task.delay(user_email, token)
-    except Exception:
-        try:
-            from app.services.email import send_verification_email
-            send_verification_email(user_email, token)
-        except Exception as e:
-            logger.warning("Could not send verification email: %s", e)
+        from app.services.email import send_verification_email
+        send_verification_email(user_email, token)
+    except Exception as e:
+        logger.warning("Could not send verification email: %s", e)
+        logger.info("Verification token for %s: %s", user_email, token)
 
 
 def _try_send_password_reset_email(user_email: str, token: str) -> None:
-    """Try Celery first; fall back to direct call if worker unavailable."""
+    """Send password reset email. Logs if unable to send."""
     try:
-        from app.tasks.email_tasks import send_password_reset_email_task
-        send_password_reset_email_task.delay(user_email, token)
-    except Exception:
-        try:
-            from app.services.email import send_password_reset_email
-            send_password_reset_email(user_email, token)
-        except Exception as e:
-            logger.warning("Could not send password reset email: %s", e)
+        from app.services.email import send_password_reset_email
+        send_password_reset_email(user_email, token)
+    except Exception as e:
+        logger.warning("Could not send password reset email: %s", e)
+        logger.info("Password reset token for %s: %s", user_email, token)
 
 
 async def _issue_tokens(db: AsyncSession, user: User) -> TokenResponse:
