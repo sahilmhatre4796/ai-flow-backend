@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -23,6 +24,7 @@ from app.schemas.auth import (
 from app.security import create_access_token, generate_opaque_token, hash_opaque_token, hash_password, verify_password
 from app.tasks.email_tasks import send_password_reset_email_task, send_verification_email_task
 
+logger = logging.getLogger("aiflow.auth")
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
 
@@ -61,7 +63,10 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)) ->
     )
     await db.commit()
 
-    send_verification_email_task.delay(user.email, plaintext)
+    try:
+        send_verification_email_task.delay(user.email, plaintext)
+    except Exception as e:
+        logger.warning("Failed to queue verification email: %s", e)
     return UserResponse.model_validate({**user.__dict__, "id": str(user.id)})
 
 
@@ -129,7 +134,10 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
             )
         )
         await db.commit()
-        send_password_reset_email_task.delay(user.email, plaintext)
+        try:
+            send_password_reset_email_task.delay(user.email, plaintext)
+        except Exception as e:
+            logger.warning("Failed to queue password reset email: %s", e)
 
 
 @router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
