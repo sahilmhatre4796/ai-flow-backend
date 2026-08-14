@@ -22,11 +22,36 @@ from app.schemas.auth import (
     VerifyEmailRequest,
 )
 from app.security import create_access_token, generate_opaque_token, hash_opaque_token, hash_password, verify_password
-from app.tasks.email_tasks import send_password_reset_email_task, send_verification_email_task
 
 logger = logging.getLogger("aiflow.auth")
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
+
+
+def _try_send_verification_email(user_email: str, token: str) -> None:
+    """Try Celery first; fall back to direct call if worker unavailable."""
+    try:
+        from app.tasks.email_tasks import send_verification_email_task
+        send_verification_email_task.delay(user_email, token)
+    except Exception:
+        try:
+            from app.services.email import send_verification_email
+            send_verification_email(user_email, token)
+        except Exception as e:
+            logger.warning("Could not send verification email: %s", e)
+
+
+def _try_send_password_reset_email(user_email: str, token: str) -> None:
+    """Try Celery first; fall back to direct call if worker unavailable."""
+    try:
+        from app.tasks.email_tasks import send_password_reset_email_task
+        send_password_reset_email_task.delay(user_email, token)
+    except Exception:
+        try:
+            from app.services.email import send_password_reset_email
+            send_password_reset_email(user_email, token)
+        except Exception as e:
+            logger.warning("Could not send password reset email: %s", e)
 
 
 async def _issue_tokens(db: AsyncSession, user: User) -> TokenResponse:
@@ -63,10 +88,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)) ->
     )
     await db.commit()
 
-    try:
-        send_verification_email_task.delay(user.email, plaintext)
-    except Exception as e:
-        logger.warning("Failed to queue verification email: %s", e)
+    _try_send_verification_email(user.email, plaintext)
     return UserResponse.model_validate({**user.__dict__, "id": str(user.id)})
 
 
@@ -134,10 +156,7 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
             )
         )
         await db.commit()
-        try:
-            send_password_reset_email_task.delay(user.email, plaintext)
-        except Exception as e:
-            logger.warning("Failed to queue password reset email: %s", e)
+        _try_send_password_reset_email(user.email, plaintext)
 
 
 @router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
