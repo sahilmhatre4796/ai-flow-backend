@@ -16,9 +16,12 @@ from app.services.ai_providers import get_chat_provider, get_embedding_provider
 
 
 async def retrieve_relevant_chunks(db: AsyncSession, bot_id: uuid.UUID, query: str, k: int = 4) -> list[Chunk]:
-    embedding_provider = get_embedding_provider()
-    query_embedding = await asyncio.to_thread(embedding_provider.embed_batch, [query])
-    query_embedding = query_embedding[0]
+    try:
+        embedding_provider = get_embedding_provider()
+        query_embedding = await asyncio.to_thread(embedding_provider.embed_batch, [query])
+        query_embedding = query_embedding[0]
+    except Exception:
+        return []
 
     result = await db.execute(
         select(Chunk)
