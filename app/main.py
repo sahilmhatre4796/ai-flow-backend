@@ -74,36 +74,3 @@ async def health() -> dict:
 
     all_ok = all(v == "ok" for v in checks.values())
     return {"status": "ok" if all_ok else "degraded", "checks": checks}
-
-
-@app.post("/test-register")
-async def test_register():
-    """Temporary debug endpoint to test registration flow."""
-    import traceback
-    try:
-        from app.database import AsyncSessionLocal
-        from app.models.user import User, EmailVerificationToken
-        from app.security import hash_password, generate_opaque_token
-        from datetime import datetime, timedelta, timezone
-        
-        async with AsyncSessionLocal() as db:
-            from sqlalchemy import select
-            result = await db.execute(select(User).where(User.email == "debug@test.com"))
-            existing = result.scalar_one_or_none()
-            if existing:
-                return {"status": "user_exists", "user_id": str(existing.id)}
-            
-            user = User(email="debug@test.com", hashed_password=hash_password("Debug1234!"), full_name="Debug User")
-            db.add(user)
-            await db.flush()
-            user_id = user.id
-            
-            plaintext, hashed = generate_opaque_token()
-            db.add(EmailVerificationToken(
-                user_id=user.id, hashed_token=hashed,
-                expires_at=datetime.now(timezone.utc) + timedelta(hours=48),
-            ))
-            await db.commit()
-            return {"status": "ok", "user_id": str(user_id), "token": plaintext}
-    except Exception as e:
-        return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
