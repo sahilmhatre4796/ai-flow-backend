@@ -41,8 +41,9 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     import logging, traceback
     logger = logging.getLogger("aiflow.error")
-    logger.error("Unhandled error on %s: %s\n%s", request.url.path, exc, traceback.format_exc())
-    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+    tb = traceback.format_exc()
+    logger.error("Unhandled error on %s: %s\n%s", request.url.path, exc, tb)
+    return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__, "traceback": tb})
 
 app.include_router(auth.router)
 app.include_router(workspaces.router)
