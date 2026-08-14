@@ -106,11 +106,13 @@ class EmbeddingProvider(abc.ABC):
 
 class OpenAIEmbeddingProvider(EmbeddingProvider):
     def __init__(self) -> None:
-        if not settings.OPENAI_API_KEY:
-            raise RuntimeError("OPENAI_API_KEY is not configured")
-        kwargs = {"api_key": settings.OPENAI_API_KEY}
-        if settings.OPENAI_BASE_URL:
-            kwargs["base_url"] = settings.OPENAI_BASE_URL
+        api_key = settings.EMBEDDING_API_KEY or settings.OPENAI_API_KEY
+        if not api_key:
+            raise RuntimeError("No API key configured for embeddings (set EMBEDDING_API_KEY or OPENAI_API_KEY)")
+        kwargs = {"api_key": api_key}
+        base_url = settings.EMBEDDING_BASE_URL or settings.OPENAI_BASE_URL
+        if base_url:
+            kwargs["base_url"] = base_url
         self._client = OpenAI(**kwargs)
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:

@@ -54,6 +54,8 @@ class Settings(BaseSettings):
     DEFAULT_EMBEDDING_PROVIDER: str = "openai"
     DEFAULT_EMBEDDING_MODEL: str = "text-embedding-3-small"
     EMBEDDING_DIM: int = 1536
+    EMBEDDING_BASE_URL: str | None = None
+    EMBEDDING_API_KEY: str | None = None
 
     # --- Billing ---
     STRIPE_SECRET_KEY: str | None = None
