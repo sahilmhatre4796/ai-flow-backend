@@ -46,29 +46,35 @@ async def widget_socket(websocket: WebSocket, bot_public_key: str, visitor_id: s
         try:
             while True:
                 text = await websocket.receive_text()
-                user_message = Message(conversation_id=conversation.id, role=MessageRole.USER, content=text)
-                db.add(user_message)
-                await db.flush()
-                await broadcaster.publish(bot.workspace_id, {
-                    "type": "message", "conversation_id": str(conversation.id),
-                    "role": "user", "content": text, "created_at": user_message.created_at.isoformat(),
-                })
+                async with AsyncSessionLocal() as msg_db:
+                    result = await msg_db.execute(select(Bot).where(Bot.id == bot.id))
+                    current_bot = result.scalar_one_or_none()
+                    if not current_bot or not current_bot.is_active:
+                        await websocket.send_json({"role": "assistant", "content": "This bot is no longer active."})
+                        continue
 
-                reply_text, used_chunks = await generate_bot_response(db, bot, text)
-                assistant_message = Message(
-                    conversation_id=conversation.id, role=MessageRole.ASSISTANT, content=reply_text,
-                    retrieved_chunk_ids=[str(c.id) for c in used_chunks],
-                )
-                db.add(assistant_message)
-                conversation.last_message_at = datetime.now(timezone.utc)
-                await db.commit()
+                    user_message = Message(conversation_id=conversation.id, role=MessageRole.USER, content=text)
+                    msg_db.add(user_message)
+                    await msg_db.flush()
+                    await broadcaster.publish(bot.workspace_id, {
+                        "type": "message", "conversation_id": str(conversation.id),
+                        "role": "user", "content": text, "created_at": user_message.created_at.isoformat(),
+                    })
 
-                await websocket.send_json({"role": "assistant", "content": reply_text})
-                await broadcaster.publish(bot.workspace_id, {
-                    "type": "message", "conversation_id": str(conversation.id),
-                    "role": "assistant", "content": reply_text,
-                    "created_at": assistant_message.created_at.isoformat(),
-                })
+                    reply_text, used_chunks = await generate_bot_response(msg_db, current_bot, text)
+                    assistant_message = Message(
+                        conversation_id=conversation.id, role=MessageRole.ASSISTANT, content=reply_text,
+                        retrieved_chunk_ids=[str(c.id) for c in used_chunks],
+                    )
+                    msg_db.add(assistant_message)
+                    await msg_db.commit()
+
+                    await websocket.send_json({"role": "assistant", "content": reply_text})
+                    await broadcaster.publish(bot.workspace_id, {
+                        "type": "message", "conversation_id": str(conversation.id),
+                        "role": "assistant", "content": reply_text,
+                        "created_at": assistant_message.created_at.isoformat(),
+                    })
         except WebSocketDisconnect:
             pass
         finally:

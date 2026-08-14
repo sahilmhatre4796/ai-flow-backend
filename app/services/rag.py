@@ -4,6 +4,7 @@ pgvector cosine-distance nearest-neighbor query scoped to the bot's *ready*
 documents, and only then calls the chat provider — with an honest fallback
 when nothing relevant was found, instead of letting the model guess freely.
 """
+import asyncio
 import uuid
 
 from sqlalchemy import select
@@ -16,9 +17,8 @@ from app.services.ai_providers import get_chat_provider, get_embedding_provider
 
 async def retrieve_relevant_chunks(db: AsyncSession, bot_id: uuid.UUID, query: str, k: int = 4) -> list[Chunk]:
     embedding_provider = get_embedding_provider()
-    # embed_batch is sync (it's also used from Celery); cheap enough to call
-    # directly here for a single query string.
-    query_embedding = embedding_provider.embed_batch([query])[0]
+    query_embedding = await asyncio.to_thread(embedding_provider.embed_batch, [query])
+    query_embedding = query_embedding[0]
 
     result = await db.execute(
         select(Chunk)
