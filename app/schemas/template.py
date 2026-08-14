@@ -1,15 +1,14 @@
 from pydantic import BaseModel
 
+from app.schemas import ResponseBase
 
-class TemplateResponse(BaseModel):
+
+class TemplateResponse(ResponseBase):
     id: str
     name: str
     description: str
     category: str
     install_count: int  # COUNT(*) from template_installs — never fabricated
-
-    class Config:
-        from_attributes = True
 
 
 class InstallTemplateRequest(BaseModel):

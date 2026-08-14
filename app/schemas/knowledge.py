@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.models.knowledge import DocumentSourceType, DocumentStatus
+from app.schemas import ResponseBase
 
 
 class DocumentCreateFromTextRequest(BaseModel):
@@ -16,7 +17,7 @@ class DocumentCreateFromUrlRequest(BaseModel):
     is_sitemap: bool = False
 
 
-class DocumentResponse(BaseModel):
+class DocumentResponse(ResponseBase):
     id: str
     name: str
     source_type: DocumentSourceType
@@ -25,14 +26,8 @@ class DocumentResponse(BaseModel):
     error_message: str | None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
 
-
-class ChunkResponse(BaseModel):
+class ChunkResponse(ResponseBase):
     id: str
     chunk_index: int
     content: str
-
-    class Config:
-        from_attributes = True

@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.models.bot import ChatProviderName
+from app.schemas import ResponseBase
 
 
 class BotCreateRequest(BaseModel):
@@ -22,7 +23,7 @@ class BotUpdateRequest(BaseModel):
     widget_position: str | None = None
 
 
-class BotResponse(BaseModel):
+class BotResponse(ResponseBase):
     id: str
     name: str
     persona: str
@@ -33,6 +34,3 @@ class BotResponse(BaseModel):
     widget_color: str
     widget_position: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True

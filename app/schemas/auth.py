@@ -1,5 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 
+from app.schemas import ResponseBase
+
 
 class RegisterRequest(BaseModel):
     email: EmailStr
@@ -35,11 +37,8 @@ class VerifyEmailRequest(BaseModel):
     token: str
 
 
-class UserResponse(BaseModel):
+class UserResponse(ResponseBase):
     id: str
     email: EmailStr
     full_name: str
     is_email_verified: bool
-
-    class Config:
-        from_attributes = True

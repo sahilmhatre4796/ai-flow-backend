@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr
 
+from app.schemas import ResponseBase
+
 
 class LeadCreateRequest(BaseModel):
     bot_id: str
@@ -12,7 +14,7 @@ class LeadCreateRequest(BaseModel):
     company: str | None = None
 
 
-class LeadResponse(BaseModel):
+class LeadResponse(ResponseBase):
     id: str
     bot_id: str
     name: str
@@ -20,6 +22,3 @@ class LeadResponse(BaseModel):
     phone: str | None
     company: str | None
     captured_at: datetime
-
-    class Config:
-        from_attributes = True
