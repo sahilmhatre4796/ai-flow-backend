@@ -87,10 +87,31 @@ async def test_workspace():
         import uuid
         
         async with AsyncSessionLocal() as db:
-            from sqlalchemy import select
-            # Try to list workspaces
-            result = await db.execute(select(Workspace).limit(5))
-            workspaces = result.scalars().all()
-            return {"status": "ok", "workspace_count": len(workspaces)}
+            from sqlalchemy import select, text
+            # Check tables exist
+            result = await db.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'"))
+            tables = [r[0] for r in result.fetchall()]
+            
+            # Try creating a workspace
+            ws = Workspace(name="test", slug="test-slug", owner_id=uuid.uuid4())
+            db.add(ws)
+            await db.flush()
+            ws_id = ws.id
+            
+            sub = Subscription(workspace_id=ws_id)
+            db.add(sub)
+            await db.flush()
+            
+            mem = WorkspaceMembership(workspace_id=ws_id, user_id=uuid.uuid4(), role=WorkspaceRole.OWNER, status=MembershipStatus.ACTIVE)
+            db.add(mem)
+            await db.commit()
+            
+            # Cleanup
+            await db.delete(mem)
+            await db.delete(sub)
+            await db.delete(ws)
+            await db.commit()
+            
+            return {"status": "ok", "tables": tables, "test_workspace_id": str(ws_id)}
     except Exception as e:
         return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
