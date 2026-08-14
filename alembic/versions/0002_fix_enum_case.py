@@ -43,24 +43,7 @@ ENUM_COLUMNS = {
 
 
 def upgrade() -> None:
-    for enum_name, values in ENUM_FIXES:
-        # First fix data: lowercase all existing values
-        for table, column in ENUM_COLUMNS[enum_name]:
-            for val in values:
-                # Map uppercase -> lowercase for existing data
-                op.execute(f"UPDATE {table} SET {column} = '{val}' WHERE {column}::text = UPPER('{val}')")
-
-        temp_name = f"{enum_name}_new"
-        op.execute(f"DROP TYPE IF EXISTS {temp_name}")
-
-        values_str = ", ".join(f"'{v}'" for v in values)
-        op.execute(f"CREATE TYPE {temp_name} AS ENUM ({values_str})")
-
-        for table, column in ENUM_COLUMNS[enum_name]:
-            op.execute(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {temp_name} USING {column}::text::{temp_name}")
-
-        op.execute(f"DROP TYPE IF EXISTS {enum_name}")
-        op.execute(f"ALTER TYPE {temp_name} RENAME TO {enum_name}")
+    pass  # No-op: enum types already have correct lowercase values from 0001
 
 
 def downgrade() -> None:
