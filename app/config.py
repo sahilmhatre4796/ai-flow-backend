@@ -46,6 +46,7 @@ class Settings(BaseSettings):
 
     # --- AI providers ---
     OPENAI_API_KEY: str | None = None
+    OPENAI_BASE_URL: str | None = None
     ANTHROPIC_API_KEY: str | None = None
     OLLAMA_BASE_URL: str = "http://ollama:11434"
     DEFAULT_CHAT_PROVIDER: str = "anthropic"

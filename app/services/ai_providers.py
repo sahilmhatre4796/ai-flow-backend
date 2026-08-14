@@ -33,7 +33,10 @@ class OpenAIChatProvider(ChatProvider):
     def __init__(self) -> None:
         if not settings.OPENAI_API_KEY:
             raise RuntimeError("OPENAI_API_KEY is not configured")
-        self._client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        kwargs = {"api_key": settings.OPENAI_API_KEY}
+        if settings.OPENAI_BASE_URL:
+            kwargs["base_url"] = settings.OPENAI_BASE_URL
+        self._client = AsyncOpenAI(**kwargs)
 
     async def generate(self, system: str, user_message: str, model: str) -> str:
         response = await self._client.chat.completions.create(
@@ -105,7 +108,10 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
     def __init__(self) -> None:
         if not settings.OPENAI_API_KEY:
             raise RuntimeError("OPENAI_API_KEY is not configured")
-        self._client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        kwargs = {"api_key": settings.OPENAI_API_KEY}
+        if settings.OPENAI_BASE_URL:
+            kwargs["base_url"] = settings.OPENAI_BASE_URL
+        self._client = OpenAI(**kwargs)
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         response = self._client.embeddings.create(model=settings.DEFAULT_EMBEDDING_MODEL, input=texts)
