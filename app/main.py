@@ -36,6 +36,14 @@ app.add_middleware(
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    import logging, traceback
+    logger = logging.getLogger("aiflow.error")
+    logger.error("Unhandled error on %s: %s\n%s", request.url.path, exc, traceback.format_exc())
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
 app.include_router(auth.router)
 app.include_router(workspaces.router)
 app.include_router(team.router)
@@ -76,42 +84,39 @@ async def health() -> dict:
     return {"status": "ok" if all_ok else "degraded", "checks": checks}
 
 
-@app.post("/test-workspace")
-async def test_workspace():
-    """Temporary debug endpoint."""
+@app.post("/test-ws-create")
+async def test_ws_create():
+    """Test workspace creation with actual DB user."""
     import traceback
     try:
         from app.database import AsyncSessionLocal
         from app.models.workspace import Workspace, WorkspaceMembership, WorkspaceRole, MembershipStatus
         from app.models.billing import Subscription
-        import uuid
+        from app.models.user import User
+        from sqlalchemy import select
+        import re, secrets
         
         async with AsyncSessionLocal() as db:
-            from sqlalchemy import select, text
-            # Check tables exist
-            result = await db.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'"))
-            tables = [r[0] for r in result.fetchall()]
+            # Find an existing user
+            result = await db.execute(select(User).limit(1))
+            user = result.scalar_one_or_none()
+            if not user:
+                return {"status": "error", "error": "No users in DB"}
             
-            # Try creating a workspace
-            ws = Workspace(name="test", slug="test-slug", owner_id=uuid.uuid4())
+            def slugify(name):
+                base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "workspace"
+                return f"{base}-{secrets.token_hex(3)}"
+            
+            ws = Workspace(name="Test WS", slug=slugify("Test WS"), owner_id=user.id)
             db.add(ws)
             await db.flush()
-            ws_id = ws.id
             
-            sub = Subscription(workspace_id=ws_id)
-            db.add(sub)
-            await db.flush()
-            
-            mem = WorkspaceMembership(workspace_id=ws_id, user_id=uuid.uuid4(), role=WorkspaceRole.OWNER, status=MembershipStatus.ACTIVE)
+            mem = WorkspaceMembership(workspace_id=ws.id, user_id=user.id, role=WorkspaceRole.OWNER, status=MembershipStatus.ACTIVE)
             db.add(mem)
+            sub = Subscription(workspace_id=ws.id)
+            db.add(sub)
             await db.commit()
             
-            # Cleanup
-            await db.delete(mem)
-            await db.delete(sub)
-            await db.delete(ws)
-            await db.commit()
-            
-            return {"status": "ok", "tables": tables, "test_workspace_id": str(ws_id)}
+            return {"status": "ok", "workspace_id": str(ws.id), "user_id": str(user.id)}
     except Exception as e:
         return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
