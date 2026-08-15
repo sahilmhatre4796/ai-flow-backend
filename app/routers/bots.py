@@ -5,9 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies import require_admin, require_member
+from app.dependencies import get_current_user, require_admin, require_member
 from app.models.bot import Bot, generate_public_key
 from app.models.billing import PLAN_LIMITS, Subscription
+from app.models.user import User
 from app.models.workspace import WorkspaceMembership
 from app.schemas.bot import BotCreateRequest, BotResponse, BotUpdateRequest
 
@@ -29,20 +30,23 @@ async def create_bot(
     workspace_id: uuid.UUID,
     body: BotCreateRequest,
     _membership: WorkspaceMembership = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> BotResponse:
     # Enforce the real plan limit before creating — never let usage silently exceed it.
-    sub_result = await db.execute(select(Subscription).where(Subscription.workspace_id == workspace_id))
-    subscription = sub_result.scalar_one_or_none()
-    plan = subscription.plan if subscription else None
-    bot_limit = PLAN_LIMITS.get(plan, {}).get("bots") if plan else None
-    if bot_limit is not None:
-        count_result = await db.execute(select(Bot).where(Bot.workspace_id == workspace_id))
-        if len(count_result.scalars().all()) >= bot_limit:
-            raise HTTPException(
-                status.HTTP_402_PAYMENT_REQUIRED,
-                f"Your plan allows {bot_limit} bot(s). Upgrade to create more.",
-            )
+    # Sahil (owner) gets unlimited bots.
+    if current_user.email != "sahilmhatre4796@gmail.com":
+        sub_result = await db.execute(select(Subscription).where(Subscription.workspace_id == workspace_id))
+        subscription = sub_result.scalar_one_or_none()
+        plan = subscription.plan if subscription else None
+        bot_limit = PLAN_LIMITS.get(plan, {}).get("bots") if plan else None
+        if bot_limit is not None:
+            count_result = await db.execute(select(Bot).where(Bot.workspace_id == workspace_id))
+            if len(count_result.scalars().all()) >= bot_limit:
+                raise HTTPException(
+                    status.HTTP_402_PAYMENT_REQUIRED,
+                    f"Your plan allows {bot_limit} bot(s). Upgrade to create more.",
+                )
 
     bot = Bot(
         workspace_id=workspace_id,
