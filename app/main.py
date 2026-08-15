@@ -23,15 +23,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AI FLOW API", version="1.0.0", lifespan=lifespan)
 
-cors_origins = settings.cors_origins()
-if not cors_origins or cors_origins == [""]:
-    cors_origins = [
-        "https://aiflow-ai.vercel.app",
-        "https://ai-flow-sahilmhatre4796s-projects.vercel.app",
-        "https://ai-flow-frontend-pied.vercel.app",
-        "http://localhost:5173",
-        "http://localhost:5174",
-    ]
+cors_origins = [
+    "https://aiflow-ai.vercel.app",
+    "https://ai-flow-sahilmhatre4796s-projects.vercel.app",
+    "https://ai-flow-frontend-pied.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:5174",
+]
 
 app.add_middleware(
     CORSMiddleware,
