@@ -25,7 +25,7 @@ settings = get_settings()
 # ─────────────────────────── Chat (async — used by the API/websocket layer) ───────────────────────────
 class ChatProvider(abc.ABC):
     @abc.abstractmethod
-    async def generate(self, system: str, user_message: str, model: str) -> str:
+    async def generate(self, system: str, user_message: str, model: str, max_tokens: int = 300) -> str:
         ...
 
 
@@ -38,11 +38,11 @@ class OpenAIChatProvider(ChatProvider):
             kwargs["base_url"] = settings.OPENAI_BASE_URL
         self._client = AsyncOpenAI(**kwargs)
 
-    async def generate(self, system: str, user_message: str, model: str) -> str:
+    async def generate(self, system: str, user_message: str, model: str, max_tokens: int = 300) -> str:
         response = await self._client.chat.completions.create(
             model=model,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user_message}],
-            max_tokens=1000,
+            max_tokens=max_tokens,
         )
         return (response.choices[0].message.content or "").strip()
 
@@ -53,10 +53,10 @@ class AnthropicChatProvider(ChatProvider):
             raise RuntimeError("ANTHROPIC_API_KEY is not configured")
         self._client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
-    async def generate(self, system: str, user_message: str, model: str) -> str:
+    async def generate(self, system: str, user_message: str, model: str, max_tokens: int = 300) -> str:
         response = await self._client.messages.create(
             model=model,
-            max_tokens=1000,
+            max_tokens=max_tokens,
             system=system,
             messages=[{"role": "user", "content": user_message}],
         )
@@ -67,7 +67,7 @@ class OllamaChatProvider(ChatProvider):
     """Local/self-hosted models — no API key, no data leaving the customer's
     own infrastructure if they point OLLAMA_BASE_URL at their own host."""
 
-    async def generate(self, system: str, user_message: str, model: str) -> str:
+    async def generate(self, system: str, user_message: str, model: str, max_tokens: int = 300) -> str:
         async with httpx.AsyncClient(timeout=60.0) as client:
             resp = await client.post(
                 f"{settings.OLLAMA_BASE_URL}/api/chat",
@@ -78,6 +78,7 @@ class OllamaChatProvider(ChatProvider):
                         {"role": "user", "content": user_message},
                     ],
                     "stream": False,
+                    "options": {"num_predict": max_tokens},
                 },
             )
             resp.raise_for_status()

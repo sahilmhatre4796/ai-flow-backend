@@ -52,9 +52,11 @@ async def generate_bot_response(db: AsyncSession, bot: Bot, question: str) -> tu
     context_block = build_context_block(chunks)
     system_prompt = (
         f"{bot.persona}\n\n{context_block}\n\n"
-        "Answer concisely using only the excerpts above plus general helpfulness. "
-        "If you don't know, say so plainly and offer to hand off to a human."
+        "IMPORTANT: Keep answers SHORT — 1-3 sentences max. "
+        "Do not use bullet points, numbered lists, or markdown formatting. "
+        "Answer naturally like a helpful support agent in a live chat. "
+        "If you don't know, say so in one sentence and offer human handoff."
     )
     chat_provider = get_chat_provider(bot.chat_provider.value)
-    reply = await chat_provider.generate(system_prompt, question, bot.chat_model)
+    reply = await chat_provider.generate(system_prompt, question, bot.chat_model, max_tokens=300)
     return reply or "I'm not sure how to answer that — would you like me to connect you with a person?", chunks
